@@ -13,12 +13,12 @@ def create_app():
     
     from server.routes.auth import auth_bp
     from server.routes.products import products_bp
-    from server.routes.product_categories import categories_bp
+    from server.routes.category import category_bp
     from server.routes.admin import admin_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(products_bp, url_prefix='/api/products')
-    app.register_blueprint(categories_bp, url_prefix='/api/categories')
+    app.register_blueprint(category_bp, url_prefix='/api/categories')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
     return app
