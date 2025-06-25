@@ -16,3 +16,7 @@ class AuditLog(db.Model):
     
     def __repr__(self):
         return f'<AuditLog {self.action} {self.table_name}>'
+
+
+
+        
