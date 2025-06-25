@@ -4,6 +4,7 @@ from server.models import ProductCategory
 from server.extensions import db
 from server.utils.validators import validate_category_input
 from server.services.audit_service import log_action
+from server.utils.decorators import admin_required
 
 categories_bp = Blueprint('categories', __name__)
 
