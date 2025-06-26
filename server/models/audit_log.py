@@ -1,0 +1,10 @@
+class AuditLog(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    action = db.Column(db.String(50), nullable=False)
+    table_name = db.Column(db.String(50))
+    record_id = db.Column(db.Integer)
+    old_values = db.Column(db.JSON)
+    new_values = db.Column(db.JSON)
+    ip_address = db.Column(db.String(50))
+    created_at = db.Column(db.DateTime, server_default=db.func.now())
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
