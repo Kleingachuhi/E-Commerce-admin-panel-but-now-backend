@@ -2,139 +2,37 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from server.models import Product, ProductItem, ProductCategory
 from server.extensions import db
-from server.utils.validators import validate_product_input
-from server.services.product_service import log_product_action
-from server.utils.decorators import admin_required
+from datetime import datetime
 
-products_bp = Blueprint('products', __name__)
+class Product(db.Model):
+    tablename = 'products'
 
-@products_bp.route('/', methods=['GET'])
-def get_products():
-    products = Product.query.all()
-    return jsonify([{
-        'id': p.id,
-        'name': p.name,
-        'description': p.description,
-        'base_price': p.base_price,
-        'category': p.category.name if p.category else None,
-        'items': [{
-            'id': i.id,
-            'sku': i.sku,
-            'size': i.size,
-            'color': i.color,
-            'price': p.base_price + i.price_adjustment,
-            'stock': i.stock_quantity,
-            'image_url': i.image_url
-        } for i in p.items]
-    } for p in products]), 200
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text)
+    base_price = db.Column(db.Float, nullable=False)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-@products_bp.route('/<int:id>', methods=['GET'])
-def get_product(id):
-    product = Product.query.get_or_404(id)
-    return jsonify({
-        'id': product.id,
-        'name': product.name,
-        'description': product.description,
-        'base_price': product.base_price,
-        'category': product.category.name if product.category else None,
-        'items': [{
-            'id': i.id,
-            'sku': i.sku,
-            'size': i.size,
-            'color': i.color,
-            'price': product.base_price + i.price_adjustment,
-            'stock': i.stock_quantity,
-            'image_url': i.image_url
-        } for i in product.items]
-    }), 200
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('product_categories.id'))
 
-@products_bp.route('/', methods=['POST'])
-@jwt_required()
-def create_product():
-    data = request.get_json()
-    current_user = get_jwt_identity()
-    
-    errors = validate_product_input(data)
-    if errors:
-        return jsonify({'errors': errors}), 400
-    
-    # Create product
-    product = Product(
-        name=data['name'],
-        description=data.get('description'),
-        base_price=data['base_price'],
-        user_id=current_user['id'],
-        category_id=data.get('category_id')
-    )
-    
-    db.session.add(product)
-    db.session.commit()
-    
-    # Create product items if provided
-    if 'items' in data:
-        for item_data in data['items']:
-            item = ProductItem(
-                sku=item_data['sku'],
-                size=item_data.get('size'),
-                color=item_data.get('color'),
-                price_adjustment=item_data.get('price_adjustment', 0),
-                stock_quantity=item_data.get('stock_quantity', 0),
-                image_url=item_data.get('image_url'),
-                product_id=product.id
-            )
-            db.session.add(item)
-        db.session.commit()
-    
-    # Log action
-    log_product_action(current_user['id'], 'create', 'products', product.id, None, product.to_dict())
-    
-    return jsonify({'message': 'Product created successfully', 'id': product.id}), 201
+    items = db.relationship('ProductItem', backref='product', lazy=True, cascade='all, delete-orphan')
 
-@products_bp.route('/<int:id>', methods=['PUT'])
-@jwt_required()
-def update_product(id):
-    data = request.get_json()
-    current_user = get_jwt_identity()
-    product = Product.query.get_or_404(id)
-    
-    old_values = {
-        'name': product.name,
-        'description': product.description,
-        'base_price': product.base_price,
-        'category_id': product.category_id
-    }
-    
-    errors = validate_product_input(data)
-    if errors:
-        return jsonify({'errors': errors}), 400
-    
-    # Update product
-    product.name = data['name']
-    product.description = data.get('description', product.description)
-    product.base_price = data['base_price']
-    product.category_id = data.get('category_id', product.category_id)
-    
-    db.session.commit()
-    
-    # Log action
-    log_product_action(current_user['id'], 'update', 'products', product.id, old_values, product.to_dict())
-    
-    return jsonify({'message': 'Product updated successfully'}), 200
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'description': self.description,
+            'base_price': self.base_price,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat(),
+            'user_id': self.user_id,
+            'category_id': self.category_id,
+            'items': [item.to_dict() for item in self.items]
+        }
 
-@products_bp.route('/<int:id>', methods=['DELETE'])
-@jwt_required()
-@admin_required()
-def delete_product(id):
-    current_user = get_jwt_identity()
-    product = Product.query.get_or_404(id)
-    
-    old_values = product.to_dict()
-    
-    db.session.delete(product)
-    db.session.commit()
-    
-    # Log action
-    log_product_action(current_user['id'], 'delete', 'products', id, old_values, None)
-    
-    return jsonify({'message': 'Product deleted successfully'}), 200
-
+    def repr(self):
+        return f'<Product {self.name}>'
