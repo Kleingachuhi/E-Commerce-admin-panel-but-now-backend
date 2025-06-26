@@ -1,0 +1,168 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from werkzeug.exceptions import BadRequest
+from server.models.user import User
+from server.extensions import db, bcrypt
+from server.utils.validators import validate_user_input, validate_email, validate_password
+from server.services.auth_service import log_auth_action
+
+auth_bp = Blueprint('auth', __name__)
+
+@auth_bp.route('/register', methods=['POST'])
+def register():
+    try:
+        # Ensure request contains JSON
+        if not request.is_json:
+            return jsonify({
+                "error": "Invalid content type",
+                "message": "Content-Type must be application/json"
+            }), 415
+
+        try:
+            # Validate and clean input data
+            data = validate_user_input(
+                request.get_json(),
+                required_fields=['username', 'email', 'password']
+            )
+        except BadRequest as e:
+            return jsonify(e.description), 400
+
+        # Check for existing user
+        if User.query.filter_by(username=data['username']).first():
+            return jsonify({
+                "error": "Registration failed",
+                "details": {"username": "Username already exists"}
+            }), 400
+
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({
+                "error": "Registration failed", 
+                "details": {"email": "Email already exists"}
+            }), 400
+
+        # Create and save user
+        user = User(
+            username=data['username'],
+            email=data['email'],
+            role=data.get('role', 'user')
+        )
+        user.set_password(data['password'])
+        db.session.add(user)
+        db.session.commit()
+
+        # Log the registration action
+        log_auth_action(
+            user_id=user.id,
+            action='register',
+            ip_address=request.remote_addr,
+            table_name='users',
+            record_id=user.id,
+            new_values={
+                'username': user.username,
+                'email': user.email,
+                'role': user.role
+            }
+        )
+
+        # Generate access token
+        access_token = create_access_token(identity={
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role
+        })
+
+        return jsonify({
+            'message': 'User registered successfully',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role
+            },
+            'access_token': access_token
+        }), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({
+            "error": "Internal server error",
+            "message": str(e)
+        }), 500
+
+@auth_bp.route('/login', methods=['POST'])
+def login():
+    try:
+        # Ensure request contains JSON
+        if not request.is_json:
+            return jsonify({
+                "error": "Invalid content type",
+                "message": "Content-Type must be application/json"
+            }), 415
+
+        data = request.get_json()
+
+        # Validate required fields
+        if not data or 'username' not in data or 'password' not in data:
+            return jsonify({
+                "error": "Missing credentials",
+                "message": "Username and password are required"
+            }), 400
+
+        # Find user and validate credentials
+        user = User.query.filter_by(username=data['username']).first()
+
+        if not user or not bcrypt.check_password_hash(user.password_hash, data['password']):
+            return jsonify({
+                "error": "Invalid credentials",
+                "message": "Invalid username or password"
+            }), 401
+
+        if not user.is_active:
+            return jsonify({
+                "error": "Account disabled",
+                "message": "This account has been deactivated"
+            }), 403
+
+        # Create access token
+        access_token = create_access_token(identity={
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'role': user.role
+        })
+
+        # Log the login action
+        log_auth_action(
+            user_id=user.id,
+            action='login',
+            ip_address=request.remote_addr,
+            table_name='users',
+            record_id=user.id
+        )
+
+        return jsonify({
+            'message': 'Login successful',
+            'access_token': access_token,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'role': user.role
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Login failed",
+            "message": str(e)
+        }), 500
+
+@auth_bp.route('/protected', methods=['GET'])
+@jwt_required()
+def protected():
+    current_user = get_jwt_identity()
+    return jsonify({
+        'message': 'Protected endpoint accessed successfully',
+        'user': current_user
+    }), 200

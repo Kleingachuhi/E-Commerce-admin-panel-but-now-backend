@@ -1,0 +1,68 @@
+{
+  "info": {
+    "name": "E-Commerce API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Root",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5555/",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5555",
+          "path": [""]
+        }
+      }
+    },
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"testuser\",\n    \"email\": \"test@example.com\",\n    \"password\": \"test123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5555/api/auth/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5555",
+          "path": ["api","auth","register"]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"test123\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5555/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5555",
+          "path": ["api","auth","login"]
+        }
+      }
+    }
+  ]
+}
