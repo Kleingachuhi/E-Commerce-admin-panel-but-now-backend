@@ -6,14 +6,12 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
     
-    # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
     cors.init_app(app)
     bcrypt.init_app(app)
     
-    # JSON enforcement middleware
     @app.before_request
     def ensure_json():
         if request.method in ['POST', 'PUT', 'PATCH']:
@@ -23,7 +21,6 @@ def create_app():
                     "message": "Please set Content-Type header to application/json"
                 }), 415
     
-    # Add root route
     @app.route('/')
     def index():
         return jsonify({
@@ -48,7 +45,6 @@ def create_app():
             }
         })
     
-    # Register blueprints
     from server.routes.auth import auth_bp
     from server.routes.category import category_bp
     from server.routes.admin import admin_bp
@@ -59,7 +55,6 @@ def create_app():
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(products_bp, url_prefix='/api/products')
     
-    # Error handlers
     @app.errorhandler(400)
     def bad_request(error):
         return jsonify({

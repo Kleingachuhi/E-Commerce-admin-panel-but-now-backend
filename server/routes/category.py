@@ -4,7 +4,6 @@ from server.models import ProductCategory
 from server.extensions import db
 from server.utils.decorators import admin_required
 
-# Changed blueprint name to be more consistent with file name
 category_bp = Blueprint('category', __name__)
 
 @category_bp.route('/', methods=['GET'])
