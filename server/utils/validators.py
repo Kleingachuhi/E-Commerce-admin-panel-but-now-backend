@@ -15,17 +15,14 @@ def validate_user_input(input_data, required_fields=None):
     """
     errors = {}
     
-    # 1. Check input type
     if not isinstance(input_data, dict):
         raise BadRequest("Input must be a JSON object")
 
-    # 2. Check required fields
     if required_fields:
         missing_fields = [field for field in required_fields if field not in input_data]
         if missing_fields:
             errors['missing_fields'] = missing_fields
 
-    # 3. Field-specific validations
     if 'username' in input_data:
         username = input_data['username']
         if not isinstance(username, str):
@@ -54,14 +51,12 @@ def validate_user_input(input_data, required_fields=None):
     if 'role' in input_data and input_data['role'] not in ['admin', 'user']:
         errors['role'] = "Must be either 'admin' or 'user'"
 
-    # 4. Raise errors if any
     if errors:
         raise BadRequest({
             "error": "Validation failed",
             "details": errors
         })
 
-    # 5. Clean and return data
     cleaned_data = {
         key: value.strip() if isinstance(value, str) else value
         for key, value in input_data.items()

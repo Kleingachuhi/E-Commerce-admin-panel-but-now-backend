@@ -57,7 +57,7 @@ def create_product():
         )
         
         db.session.add(product)
-        db.session.flush()  # Get the product ID before commit
+        db.session.flush()  
         
         if 'items' in data:
             for item_data in data['items']:
