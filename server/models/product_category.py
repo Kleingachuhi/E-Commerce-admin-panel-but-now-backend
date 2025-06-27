@@ -1,17 +1,14 @@
-from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required, get_jwt_identity
-from server.models import ProductCategory
 from server.extensions import db
 
 class ProductCategory(db.Model):
-    tablename = 'product_categories'
-
+    __tablename__ = 'product_categories'
+    
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True, nullable=False)
     description = db.Column(db.Text)
-
+    
     products = db.relationship('Product', backref='category', lazy=True)
-
+    
     def to_dict(self):
         return {
             'id': self.id,
@@ -19,6 +16,6 @@ class ProductCategory(db.Model):
             'description': self.description,
             'product_count': len(self.products)
         }
-
-    def repr(self):
+    
+    def __repr__(self):
         return f'<ProductCategory {self.name}>'
