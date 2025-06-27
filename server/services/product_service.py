@@ -11,7 +11,7 @@ def create_product_with_items(product_data, items_data, user_id):
     )
     
     db.session.add(product)
-    db.session.flush()  # To get the product ID
+    db.session.flush() 
     
     for item_data in items_data:
         item = ProductItem(

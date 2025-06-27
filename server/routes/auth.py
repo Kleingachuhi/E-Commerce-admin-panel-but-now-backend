@@ -155,3 +155,31 @@ def protected():
         'message': 'Protected endpoint accessed successfully',
         'user': current_user
     }), 200
+
+
+@auth_bp.route('/users/me', methods=['GET'])
+@jwt_required()
+def get_current_user():
+    try:
+        identity = get_jwt_identity()
+        user_id = identity['id'] 
+
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        return jsonify({
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role,
+                "is_active": user.is_active
+            }
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to fetch user data",
+            "message": str(e)
+        }), 500

@@ -9,11 +9,22 @@ def create_app():
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    cors.init_app(app)
     bcrypt.init_app(app)
+    cors.init_app(app, 
+        resources={
+            r"/api/*": {
+                "origins": ["http://localhost:5173"],
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": True,
+                "expose_headers": ["Content-Type", "X-Total-Count"]
+            }
+        })
     
     @app.before_request
     def ensure_json():
+        if request.method == 'OPTIONS':
+            return
         if request.method in ['POST', 'PUT', 'PATCH']:
             if not request.is_json:
                 return jsonify({
@@ -46,7 +57,7 @@ def create_app():
         })
     
     from server.routes.auth import auth_bp
-    from server.routes.category import category_bp
+    from server.routes.categories import category_bp
     from server.routes.admin import admin_bp
     from server.routes.products import products_bp
     
@@ -82,6 +93,13 @@ def create_app():
             "error": "Unsupported Media Type",
             "message": "Content-Type must be application/json"
         }), 415
+    
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        return jsonify({
+            "error": "Internal Server Error",
+            "message": "An unexpected error occurred"
+        }), 500
     
     return app
 
